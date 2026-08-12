@@ -1,5 +1,6 @@
 import sys
 import os
+from flask import make_response
 
 # Add root directory to sys.path for Vercel Serverless
 root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -13,4 +14,5 @@ app = create_app()
 @app.errorhandler(404)
 def custom_404(e):
     from flask import request
-    return f"DEBUG 404: request.path={request.path} | PATH_INFO={request.environ.get('PATH_INFO')} | HTTP_X_FORWARDED_URI={request.environ.get('HTTP_X_FORWARDED_URI')}", 404
+    debug_msg = f"DEBUG 404: request.path={request.path} | PATH_INFO={request.environ.get('PATH_INFO')} | HTTP_X_FORWARDED_URI={request.environ.get('HTTP_X_FORWARDED_URI')}"
+    return make_response(debug_msg, 200)
