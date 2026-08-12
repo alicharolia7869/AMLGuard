@@ -23,6 +23,7 @@ from routes.simulator import simulator_bp
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+    app.url_map.strict_slashes = False
 
     # Ensure Upload & Model Directories Exist
     try:
@@ -52,6 +53,10 @@ def create_app():
         from flask import session
         if 'user_id' in session:
             return redirect(url_for('dashboard.index'))
+        return redirect(url_for('auth.login'))
+
+    @app.errorhandler(404)
+    def page_not_found(e):
         return redirect(url_for('auth.login'))
 
     # Seed Database on Startup
