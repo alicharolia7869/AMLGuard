@@ -16,10 +16,15 @@ class VercelPathFix:
 
     def __call__(self, environ, start_response):
         path = environ.get('PATH_INFO', '')
+        
         if path.startswith('/api/index.py'):
             environ['PATH_INFO'] = path[13:] or '/'
         elif path.startswith('/api'):
             environ['PATH_INFO'] = path[4:] or '/'
+            
+        # Ensure SCRIPT_NAME is empty so Flask resolves root blueprint routes (/login, /dashboard)
+        environ['SCRIPT_NAME'] = ''
+        
         return self.app(environ, start_response)
 
 app = VercelPathFix(_flask_app)
