@@ -51,6 +51,56 @@ def create_app():
     app.register_blueprint(rules_bp)
     app.register_blueprint(simulator_bp)
 
+    @app.route('/login', methods=['GET', 'POST'])
+    def login_direct():
+        from routes.auth import login
+        return login()
+
+    @app.route('/register', methods=['GET', 'POST'])
+    def register_direct():
+        from routes.auth import register
+        return register()
+
+    @app.route('/dashboard')
+    def dashboard_direct():
+        from routes.dashboard import index
+        return index()
+
+    @app.route('/transactions')
+    def transactions_direct():
+        from routes.transactions import list_transactions
+        return list_transactions()
+
+    @app.route('/alerts')
+    def alerts_direct():
+        from routes.alerts import list_alerts
+        return list_alerts()
+
+    @app.route('/customers')
+    def customers_direct():
+        from routes.customers import list_customers
+        return list_customers()
+
+    @app.route('/network')
+    def network_direct():
+        from routes.network import network_view
+        return network_view()
+
+    @app.route('/analytics')
+    def analytics_direct():
+        from routes.analytics import analytics_view
+        return analytics_view()
+
+    @app.route('/rules')
+    def rules_direct():
+        from routes.rules import list_rules
+        return list_rules()
+
+    @app.route('/simulator', methods=['GET', 'POST'])
+    def simulator_direct():
+        from routes.simulator import simulator
+        return simulator()
+
     @app.route('/wsgi.py/<path:subpath>', methods=['GET', 'POST'])
     @app.route('/wsgi.py', methods=['GET', 'POST'])
     @app.route('/api/index.py/<path:subpath>', methods=['GET', 'POST'])
@@ -59,7 +109,6 @@ def create_app():
     @app.route('/api/index', methods=['GET', 'POST'])
     @app.route('/api/<path:subpath>', methods=['GET', 'POST'])
     @app.route('/api', methods=['GET', 'POST'])
-    @app.route('/<path:subpath>', methods=['GET', 'POST'])
     def handle_vercel_entry(subpath=''):
         from flask import session
         clean = subpath.strip('/')
