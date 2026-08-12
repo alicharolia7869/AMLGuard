@@ -56,36 +56,43 @@ def create_app():
 
     # Seed Database on Startup
     with app.app_context():
-        db.create_all()
-        seed_initial_data()
+        try:
+            db.create_all()
+            seed_initial_data()
+        except Exception as e:
+            print(f"Database initialization note: {e}")
 
     return app
 
 def seed_initial_data():
-    # 1. Seed Users
-    if User.query.count() == 0:
-        print("Seeding default administrative and investigator users...")
-        admin = User(name='Admin Officer', email='admin@amlguard.io', role='admin')
-        admin.set_password('admin123')
-        
-        investigator = User(name='Senior Investigator', email='investigator@amlguard.io', role='investigator')
-        investigator.set_password('investigator123')
-        
-        db.session.add(admin)
-        db.session.add(investigator)
-        db.session.commit()
+    try:
+        # 1. Seed Users
+        if User.query.count() == 0:
+            print("Seeding default administrative and investigator users...")
+            admin = User(name='Admin Officer', email='admin@amlguard.io', role='admin')
+            admin.set_password('admin123')
+            
+            investigator = User(name='Senior Investigator', email='investigator@amlguard.io', role='investigator')
+            investigator.set_password('investigator123')
+            
+            db.session.add(admin)
+            db.session.add(investigator)
+            db.session.commit()
 
-    # 2. Seed ML Models check
-    model_path = Config.CLASSIFIER_MODEL_PATH
-    if not os.path.exists(model_path):
-        print("ML Model binaries not found. Training ML pipeline...")
-        from ml.train_model import train_and_evaluate_models
-        train_and_evaluate_models()
+        # 2. Seed ML Models check
+        model_path = Config.CLASSIFIER_MODEL_PATH
+        if not os.path.exists(model_path):
+            print("ML Model binaries not found. Training ML pipeline...")
+            try:
+                from ml.train_model import train_and_evaluate_models
+                train_and_evaluate_models()
+            except Exception as e:
+                print(f"ML training note: {e}")
 
-    # 3. Seed Customers & Transactions if database empty
-    if Transaction.query.count() == 0:
-        print("Seeding synthetic customer entities and transaction ledger...")
-        risk_engine = RiskEngine()
+        # 3. Seed Customers & Transactions if database empty
+        if Transaction.query.count() == 0:
+            print("Seeding synthetic customer entities and transaction ledger...")
+            risk_engine = RiskEngine()
 
         # Seed Customers
         customers_list = [
@@ -165,6 +172,8 @@ def seed_initial_data():
 
         db.session.commit()
         print("Database seeded with sample transactions and alerts!")
+    except Exception as e:
+        print(f"Seed initial data note: {e}")
 
 app = create_app()
 
