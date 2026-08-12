@@ -15,15 +15,23 @@ class VercelWSGIHandler:
         self.flask_app = flask_app
 
     def __call__(self, environ, start_response):
-        path = environ.get('PATH_INFO', '')
-        if path.startswith('/api/index.py'):
-            path = path[13:] or '/'
-        elif path.startswith('/api/index'):
-            path = path[10:] or '/'
-        elif path.startswith('/api'):
-            path = path[4:] or '/'
+        # Extract actual edge requested URL path from Vercel headers
+        forwarded = environ.get('HTTP_X_FORWARDED_URI') or environ.get('HTTP_X_MATCHED_PATH')
+        if forwarded:
+            path = forwarded.split('?')[0]
+        else:
+            path = environ.get('PATH_INFO', '/')
+            if path.startswith('/api/index.py'):
+                path = path[13:]
+            elif path.startswith('/api/index'):
+                path = path[10:]
+            elif path.startswith('/api'):
+                path = path[4:]
+                
+        if not path or path == '':
+            path = '/'
             
-        environ['PATH_INFO'] = path if path else '/'
+        environ['PATH_INFO'] = path
         environ['SCRIPT_NAME'] = ''
         return self.flask_app(environ, start_response)
 
