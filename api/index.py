@@ -11,17 +11,19 @@ from app import create_app
 _flask_app = create_app()
 
 def app(environ, start_response):
-    req_uri = environ.get('REQUEST_URI', '') or environ.get('PATH_INFO', '')
-    req_path = req_uri.split('?')[0]
-    
-    if req_path.startswith('/api/index.py'):
-        req_path = req_path[13:]
-    elif req_path.startswith('/api'):
-        req_path = req_path[4:]
-        
-    if not req_path:
-        req_path = '/'
+    # Retrieve raw requested path from Vercel headers or PATH_INFO
+    raw_url = environ.get('HTTP_X_FORWARDED_URI') or environ.get('HTTP_X_MATCHED_PATH') or environ.get('PATH_INFO', '/')
+    raw_url = raw_url.split('?')[0]
 
-    environ['PATH_INFO'] = req_path
+    # Strip Vercel serverless rewrite prefixes cleanly
+    for prefix in ['/api/index.py', '/api/index', '/api']:
+        if raw_url.startswith(prefix):
+            raw_url = raw_url[len(prefix):]
+            break
+
+    if not raw_url or raw_url == '':
+        raw_url = '/'
+
+    environ['PATH_INFO'] = raw_url
     environ['SCRIPT_NAME'] = ''
     return _flask_app(environ, start_response)
