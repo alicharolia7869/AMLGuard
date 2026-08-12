@@ -8,24 +8,14 @@ if root_dir not in sys.path:
 
 from app import create_app
 
-_flask_app = create_app()
+app = create_app()
 
-class VercelPathFix:
-    def __init__(self, app):
-        self.app = app
-
-    def __call__(self, environ, start_response):
-        req_uri = environ.get('REQUEST_URI', '')
-        path = environ.get('PATH_INFO', '')
-        
-        if req_uri and req_uri.startswith('/'):
-            environ['PATH_INFO'] = req_uri.split('?')[0]
-        elif path.startswith('/api/index.py'):
-            environ['PATH_INFO'] = path[13:] or '/'
-        elif path.startswith('/api'):
-            environ['PATH_INFO'] = path[4:] or '/'
-            
-        environ['SCRIPT_NAME'] = ''
-        return self.app(environ, start_response)
-
-app = VercelPathFix(_flask_app)
+@app.route('/debug-env')
+def debug_env():
+    from flask import request
+    return {
+        'path': request.path,
+        'script_root': request.script_root,
+        'url': request.url,
+        'headers': dict(request.headers)
+    }
