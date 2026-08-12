@@ -1,7 +1,12 @@
 import os
-import joblib
-import pandas as pd
-import numpy as np
+
+try:
+    import joblib
+    import pandas as pd
+    import numpy as np
+    HAS_ML = True
+except ImportError:
+    HAS_ML = False
 
 class AMLPredictor:
     def __init__(self, model_dir=None):
@@ -15,9 +20,14 @@ class AMLPredictor:
         self.features_path = os.path.join(model_dir, 'features.pkl')
 
         self.loaded = False
-        self.load_models()
+        if HAS_ML:
+            self.load_models()
 
     def load_models(self):
+        if not HAS_ML:
+            self.loaded = False
+            return
+
         if os.path.exists(self.rf_path) and os.path.exists(self.iso_path) and os.path.exists(self.scaler_path):
             try:
                 self.rf_model = joblib.load(self.rf_path)
@@ -35,14 +45,11 @@ class AMLPredictor:
         """
         Takes a single transaction dictionary and returns ML prediction probability & Anomaly score.
         """
-        if not self.loaded:
+        if HAS_ML and not self.loaded:
             self.load_models()
 
-        df_single = pd.DataFrame([txn_dict])
-        
-        # Default customer avg fallback
         sender = txn_dict.get('sender_customer_id', 'UNKNOWN')
-        cust_avg = self.cust_avg_map.get(sender, 50000.0)
+        cust_avg = getattr(self, 'cust_avg_map', {}).get(sender, 50000.0) if hasattr(self, 'cust_avg_map') else 50000.0
         
         amount = float(txn_dict.get('amount', 0))
         ratio = amount / cust_avg if cust_avg > 0 else 1.0
@@ -58,37 +65,35 @@ class AMLPredictor:
         type_cash = 1 if t_type == 'CASH_DEPOSIT' else 0
         type_transfer = 1 if t_type == 'TRANSFER' else 0
 
-        cols = self.feature_names if self.feature_names else [
-            'amount', 'amount_to_avg_ratio', 'hour_of_day', 'is_off_hours',
-            'is_structuring_range', 'is_new_beneficiary', 'is_high_risk_country',
-            'type_WIRE', 'type_CASH_DEPOSIT', 'type_TRANSFER'
-        ]
+        if HAS_ML and self.loaded and getattr(self, 'scaler', None) is not None:
+            cols = getattr(self, 'feature_names', None) or [
+                'amount', 'amount_to_avg_ratio', 'hour_of_day', 'is_off_hours',
+                'is_structuring_range', 'is_new_beneficiary', 'is_high_risk_country',
+                'type_WIRE', 'type_CASH_DEPOSIT', 'type_TRANSFER'
+            ]
 
-        feat_df = pd.DataFrame([{
-            'amount': amount,
-            'amount_to_avg_ratio': ratio,
-            'hour_of_day': hour,
-            'is_off_hours': is_off_hours,
-            'is_structuring_range': is_structuring,
-            'is_new_beneficiary': is_new_ben,
-            'is_high_risk_country': is_high_geo,
-            'type_WIRE': type_wire,
-            'type_CASH_DEPOSIT': type_cash,
-            'type_TRANSFER': type_transfer
-        }], columns=cols)
+            feat_df = pd.DataFrame([{
+                'amount': amount,
+                'amount_to_avg_ratio': ratio,
+                'hour_of_day': hour,
+                'is_off_hours': is_off_hours,
+                'is_structuring_range': is_structuring,
+                'is_new_beneficiary': is_new_ben,
+                'is_high_risk_country': is_high_geo,
+                'type_WIRE': type_wire,
+                'type_CASH_DEPOSIT': type_cash,
+                'type_TRANSFER': type_transfer
+            }], columns=cols)
 
-        if self.loaded and self.scaler is not None:
             feat_scaled = self.scaler.transform(feat_df)
             ml_prob = float(self.rf_model.predict_proba(feat_scaled)[0, 1])
             
-            # Isolation forest decision function (negative score = more anomalous)
             raw_iso_score = float(self.iso_model.decision_function(feat_scaled)[0])
-            # Normalize iso score to 0..1 scale (higher = more anomalous)
             anomaly_score = max(0.0, min(1.0, 0.5 - (raw_iso_score * 2.5)))
         else:
-            # Fallback heuristic if model not yet saved
-            ml_prob = 0.8 if (ratio > 5 or is_structuring or is_high_geo) else 0.1
-            anomaly_score = 0.7 if (is_off_hours or ratio > 8) else 0.15
+            # Fallback mathematical heuristic
+            ml_prob = 0.85 if (ratio > 5 or is_structuring or is_high_geo) else 0.12
+            anomaly_score = 0.75 if (is_off_hours or ratio > 8) else 0.18
 
         return {
             'ml_prediction': round(ml_prob, 4),
