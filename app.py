@@ -158,7 +158,10 @@ def create_app():
 
     @app.errorhandler(404)
     def page_not_found(e):
-        return redirect(url_for('auth.login'))
+        from flask import request
+        if request.path.startswith('/static/') or request.path == '/favicon.ico':
+            return "Resource not found", 404
+        return render_template('login.html'), 404
 
     # Seed Database on Startup
     with app.app_context():
