@@ -51,6 +51,10 @@ def create_app():
     app.register_blueprint(rules_bp)
     app.register_blueprint(simulator_bp)
 
+    @app.route('/routes-list')
+    def list_all_routes():
+        return "<br>".join([str(rule) for rule in app.url_map.iter_rules()])
+
     @app.route('/')
     def root():
         # pyrefly: ignore [missing-import]
