@@ -1,10 +1,15 @@
 # AMLGuard — AI-Powered Anti-Money Laundering & Suspicious Transaction Detection Platform
 
 ![AMLGuard Banner](https://img.shields.io/badge/AMLGuard-AI--Security-06B6D4?style=for-the-badge&logo=shield)
+![Live Demo](https://img.shields.io/badge/Web_App-http%3A%2F%2F127.0.0.1%3A5000-10B981?style=for-the-badge&logo=googlechrome)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&logo=python)
 ![Flask](https://img.shields.io/badge/Flask-3.0.0-000000?style=for-the-badge&logo=flask)
 ![Scikit-Learn](https://img.shields.io/badge/Scikit--Learn-Random%20Forest%20%2B%20Isolation%20Forest-F7931E?style=for-the-badge&logo=scikit-learn)
-![SQLite/MySQL](https://img.shields.io/badge/Database-SQLite%2FMySQL-4479A1?style=for-the-badge&logo=sqlite)
+
+---
+
+### 🌐 Live Application URL
+> **Local Web Dashboard:** [http://127.0.0.1:5000](http://127.0.0.1:5000)
 
 ---
 
