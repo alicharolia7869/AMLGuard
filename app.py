@@ -161,7 +161,7 @@ def create_app():
         from flask import request
         if request.path.startswith('/static/') or request.path == '/favicon.ico':
             return "Resource not found", 404
-        return render_template('login.html'), 404
+        return render_template('login.html'), 200
 
     # Seed Database on Startup
     with app.app_context():
