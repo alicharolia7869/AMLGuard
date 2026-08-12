@@ -51,12 +51,15 @@ def create_app():
     app.register_blueprint(rules_bp)
     app.register_blueprint(simulator_bp)
 
+    @app.route('/wsgi.py/<path:subpath>', methods=['GET', 'POST'])
+    @app.route('/wsgi.py', methods=['GET', 'POST'])
     @app.route('/api/index.py/<path:subpath>', methods=['GET', 'POST'])
     @app.route('/api/index.py', methods=['GET', 'POST'])
     @app.route('/api/index/<path:subpath>', methods=['GET', 'POST'])
     @app.route('/api/index', methods=['GET', 'POST'])
     @app.route('/api/<path:subpath>', methods=['GET', 'POST'])
     @app.route('/api', methods=['GET', 'POST'])
+    @app.route('/<path:subpath>', methods=['GET', 'POST'])
     def handle_vercel_entry(subpath=''):
         from flask import session
         clean = subpath.strip('/')
