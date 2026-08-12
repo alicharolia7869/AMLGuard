@@ -2,9 +2,9 @@ import os
 import random
 from datetime import datetime, timedelta
 # pyrefly: ignore [missing-import]
-from flask import Flask, redirect, url_for
+from flask import Flask, redirect, url_for, render_template
 
-from config import Config
+from config import Config, IS_VERCEL
 from database.models import db, User, Customer, Transaction, Alert, Rule
 from engine.risk_engine import RiskEngine
 
@@ -190,7 +190,7 @@ def seed_initial_data():
 
         # 2. Seed ML Models check
         model_path = Config.CLASSIFIER_MODEL_PATH
-        if not os.path.exists(model_path):
+        if not os.path.exists(model_path) and not IS_VERCEL:
             print("ML Model binaries not found. Training ML pipeline...")
             try:
                 from ml.train_model import train_and_evaluate_models

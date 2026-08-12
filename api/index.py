@@ -7,12 +7,18 @@ root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if root_dir not in sys.path:
     sys.path.insert(0, root_dir)
 
-from app import create_app
+try:
+    from app import create_app
+    app = create_app()
+except Exception as err:
+    import traceback
+    err_tb = traceback.format_exc()
+    print(f"Vercel Initialization Error: {err_tb}", file=sys.stderr)
+    from flask import Flask
+    app = Flask(__name__)
+    
+    @app.route('/', defaults={'path': ''})
+    @app.route('/<path:path>')
+    def vercel_init_error(path):
+        return f"<h2>Vercel Serverless Error</h2><pre>{err_tb}</pre>", 500
 
-app = create_app()
-
-@app.errorhandler(404)
-def custom_404(e):
-    from flask import request
-    debug_msg = f"DEBUG 404: request.path={request.path} | PATH_INFO={request.environ.get('PATH_INFO')} | HTTP_X_FORWARDED_URI={request.environ.get('HTTP_X_FORWARDED_URI')}"
-    return make_response(debug_msg, 200)
