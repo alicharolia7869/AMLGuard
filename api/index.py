@@ -13,4 +13,4 @@ app = create_app()
 @app.errorhandler(404)
 def custom_404(e):
     from flask import request
-    return f"DEBUG 404: request.path={request.path} | request.url={request.url} | PATH_INFO={request.environ.get('PATH_INFO')} | RAW_URI={request.environ.get('RAW_URI')} | HTTP_X_FORWARDED_URI={request.environ.get('HTTP_X_FORWARDED_URI')}", 404
+    return f"DEBUG 404: request.path={request.path} | PATH_INFO={request.environ.get('PATH_INFO')} | HTTP_X_FORWARDED_URI={request.environ.get('HTTP_X_FORWARDED_URI')}", 404
