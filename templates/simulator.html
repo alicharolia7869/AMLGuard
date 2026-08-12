@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Live Risk Simulator — AMLGuard{% endblock %}
+{% block page_heading %}Real-Time Transaction Risk Simulator Cockpit{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 2rem; background: linear-gradient(135deg, #111827 0%, #1E293B 100%);">
+    <h3><i class="fa-solid fa-flask-vial" style="color: var(--accent-cyan);"></i> Live Scenario & Pattern Assessment Simulator</h3>
+    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;">
+        Test hypothesis scenarios, test high-risk parameters, and evaluate instant ML probability and rule point outputs before ledger processing.
+    </p>
+</div>
+
+<div class="grid-2">
+    <!-- Simulator Form Input -->
+    <div class="card">
+        <h3 style="margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+            <i class="fa-solid fa-sliders" style="color: var(--accent-blue);"></i> Transaction Simulation Parameters
+        </h3>
+
+        <form method="POST" action="{{ url_for('simulator.simulator') }}">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.4rem;">Sender Account</label>
+                    <input type="text" name="sender_account" value="{{ sim_result.inputs.sender_account if sim_result else 'ACC-59901' }}" class="form-control" required>
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.4rem;">Receiver Account</label>
+                    <input type="text" name="receiver_account" value="{{ sim_result.inputs.receiver_account if sim_result else 'ACC-59902' }}" class="form-control" required>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.4rem;">Amount Monitored (INR)</label>
+                    <input type="number" step="0.01" name="amount" value="{{ sim_result.inputs.amount if sim_result else '950000' }}" class="form-control" required>
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.4rem;">Sender Avg Monthly Income</label>
+                    <input type="number" step="0.01" name="cust_avg" value="{{ sim_result.inputs.cust_avg if sim_result else '50000' }}" class="form-control" required>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.4rem;">Transaction Type</label>
+                    <select name="transaction_type" class="form-select">
+                        <option value="WIRE" {% if sim_result and sim_result.inputs.transaction_type == 'WIRE' %}selected{% endif %}>WIRE Transfer</option>
+                        <option value="CASH_DEPOSIT" {% if sim_result and sim_result.inputs.transaction_type == 'CASH_DEPOSIT' %}selected{% endif %}>CASH DEPOSIT</option>
+                        <option value="TRANSFER" {% if sim_result and sim_result.inputs.transaction_type == 'TRANSFER' %}selected{% endif %}>TRANSFER</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.4rem;">Time of Day (1 - 24 Hours)</label>
+                    <select name="hour_of_day" class="form-select">
+                        <option value="2" {% if sim_result and sim_result.inputs.hour_of_day == 2 %}selected{% endif %}>2:00 AM (Off-Hours Night)</option>
+                        <option value="14" {% if sim_result and sim_result.inputs.hour_of_day == 14 %}selected{% endif %}>2:00 PM (Regular Daytime)</option>
+                        <option value="23" {% if sim_result and sim_result.inputs.hour_of_day == 23 %}selected{% endif %}>11:00 PM (Late Night)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.4rem;">Is New Beneficiary?</label>
+                    <select name="is_new_beneficiary" class="form-select">
+                        <option value="1" {% if sim_result and sim_result.inputs.is_new_beneficiary == 1 %}selected{% endif %}>Yes (First Transfer)</option>
+                        <option value="0" {% if sim_result and sim_result.inputs.is_new_beneficiary == 0 %}selected{% endif %}>No (Existing Recipient)</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.4rem;">High-Risk Secrecy Jurisdiction?</label>
+                    <select name="is_high_risk_country" class="form-select">
+                        <option value="1" {% if sim_result and sim_result.inputs.is_high_risk_country == 1 %}selected{% endif %}>Yes (Panama / Cayman / Cyprus)</option>
+                        <option value="0" {% if sim_result and sim_result.inputs.is_high_risk_country == 0 %}selected{% endif %}>No (Domestic / Standard)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.4rem;">Location String</label>
+                <input type="text" name="location" value="{{ sim_result.inputs.location if sim_result else 'Panama City, PA' }}" class="form-control" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 0.8rem;">
+                <i class="fa-solid fa-bolt"></i> Run Live Risk Assessment
+            </button>
+        </form>
+    </div>
+
+    <!-- Simulator Result Card -->
+    <div class="card">
+        <h3 style="margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+            <i class="fa-solid fa-chart-simple" style="color: var(--accent-purple);"></i> Real-Time Risk Score Breakdown
+        </h3>
+
+        {% if sim_result %}
+        <div style="text-align: center; background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem;">
+            <span class="risk-pill {{ sim_result.risk_tier }}" style="font-size: 0.9rem; padding: 0.4rem 1rem; margin-bottom: 0.5rem;">
+                {{ sim_result.risk_tier }} RISK TIER
+            </span>
+            <div style="font-size: 3rem; font-weight: 800; font-family: var(--font-heading); color: {% if sim_result.risk_score >= 81 %}var(--risk-critical){% elif sim_result.risk_score >= 61 %}var(--risk-high){% elif sim_result.risk_score >= 31 %}var(--risk-medium){% else %}var(--risk-low){% endif %};">
+                {{ sim_result.risk_score }} <span style="font-size: 1.2rem; color: var(--text-muted);">/ 100</span>
+            </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.85rem; margin-bottom: 1.5rem;">
+            <div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.3rem;">
+                    <span>Random Forest ML Probability:</span>
+                    <b style="color: var(--accent-blue);">{{ (sim_result.ml_prediction * 100)|round(1) }}% ({{ sim_result.breakdown.ml_points }} Pts)</b>
+                </div>
+                <div style="height: 8px; background: #1E293B; border-radius: 4px; overflow: hidden;">
+                    <div style="width: {{ sim_result.ml_prediction * 100 }}%; height: 100%; background: #3B82F6;"></div>
+                </div>
+            </div>
+
+            <div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.3rem;">
+                    <span>Isolation Forest Anomaly Score:</span>
+                    <b style="color: var(--accent-purple);">{{ (sim_result.anomaly_score * 100)|round(1) }}% ({{ sim_result.breakdown.anomaly_points }} Pts)</b>
+                </div>
+                <div style="height: 8px; background: #1E293B; border-radius: 4px; overflow: hidden;">
+                    <div style="width: {{ sim_result.anomaly_score * 100 }}%; height: 100%; background: #8B5CF6;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <h4 style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Triggered AML Rule Violations:</h4>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                {% for reason in sim_result.reasons %}
+                <div style="background: rgba(15, 23, 42, 0.6); padding: 0.65rem; border-radius: 6px; font-size: 0.85rem; border-left: 3px solid var(--risk-high);">
+                    {{ reason }}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div style="text-align: center; color: var(--text-muted); padding: 4rem 1rem;">
+            <i class="fa-solid fa-vial" style="font-size: 3rem; color: var(--accent-cyan); margin-bottom: 1rem; opacity: 0.5;"></i>
+            <p>Enter parameters on the left and click <b>Run Live Risk Assessment</b> to simulate real-time risk scoring.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

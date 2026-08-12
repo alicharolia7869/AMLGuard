@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Alert Center — AMLGuard{% endblock %}
+{% block page_heading %}Anti-Money Laundering Alert Stream & Escalation Queue{% endblock %}
+
+{% block content %}
+<!-- Severity & Assignment Filter Pills -->
+<div style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+        <a href="{{ url_for('alerts.list_alerts') }}" class="btn {% if not current_severity and not assigned_me %}btn-primary{% else %}btn-secondary{% endif %}">
+            All Severity Alerts
+        </a>
+        <a href="{{ url_for('alerts.list_alerts', severity='CRITICAL') }}" class="btn {% if current_severity == 'CRITICAL' %}btn-danger{% else %}btn-secondary{% endif %}">
+            🔴 CRITICAL
+        </a>
+        <a href="{{ url_for('alerts.list_alerts', severity='HIGH') }}" class="btn {% if current_severity == 'HIGH' %}btn-warning{% else %}btn-secondary{% endif %}">
+            🟠 HIGH
+        </a>
+        <a href="{{ url_for('alerts.list_alerts', severity='MEDIUM') }}" class="btn {% if current_severity == 'MEDIUM' %}btn-secondary{% else %}btn-secondary{% endif %}">
+            🟡 MEDIUM
+        </a>
+    </div>
+
+    <div>
+        <a href="{{ url_for('alerts.list_alerts', assigned_me=1) }}" class="btn {% if assigned_me == '1' %}btn-primary{% else %}btn-secondary{% endif %}">
+            <i class="fa-solid fa-user-check"></i> Assigned to Me ({{ session.get('user_name') }})
+        </a>
+    </div>
+</div>
+
+<!-- Alert Stream Cards -->
+<div style="display: flex; flex-direction: column; gap: 1rem;">
+    {% for alert in alerts %}
+    <div class="card" style="border-left: 5px solid {% if alert.severity == 'CRITICAL' %}var(--risk-critical){% elif alert.severity == 'HIGH' %}var(--risk-high){% elif alert.severity == 'MEDIUM' %}var(--risk-medium){% else %}var(--risk-low){% endif %};">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                    <span class="risk-pill {{ alert.severity }}">{{ alert.severity }}</span>
+                    <h3 style="font-size: 1.1rem; color: #FFF;">Transaction ID: {{ alert.transaction_id }}</h3>
+                    <span style="font-size: 0.8rem; background: rgba(255,255,255,0.08); padding: 0.2rem 0.6rem; border-radius: 4px; color: var(--text-secondary);">
+                        Status: <b>{{ alert.status }}</b>
+                    </span>
+                </div>
+
+                <p style="font-size: 0.9rem; color: var(--text-secondary); white-space: pre-line; margin-bottom: 0.75rem;">
+                    {{ alert.reasons }}
+                </p>
+
+                <div style="font-size: 0.8rem; color: var(--text-muted); display: flex; gap: 1.5rem;">
+                    <span><i class="fa-solid fa-clock"></i> Generated: {{ alert.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>
+                    {% if alert.assigned_to %}
+                    <span><i class="fa-solid fa-user-check"></i> Assigned: {{ alert.assigned_to }}</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <form method="POST" action="{{ url_for('alerts.update_status', alert_id=alert.id) }}" style="display: flex; gap: 0.5rem;">
+                    <select name="status" class="form-select" style="padding: 0.4rem 0.6rem; font-size: 0.8rem;" onchange="this.form.submit()">
+                        <option value="PENDING" {% if alert.status == 'PENDING' %}selected{% endif %}>Set Pending</option>
+                        <option value="UNDER_REVIEW" {% if alert.status == 'UNDER_REVIEW' %}selected{% endif %}>Mark Under Review</option>
+                        <option value="ESCALATED" {% if alert.status == 'ESCALATED' %}selected{% endif %}>Escalate to Compliance</option>
+                        <option value="CLEARED" {% if alert.status == 'CLEARED' %}selected{% endif %}>Clear Alert</option>
+                    </select>
+                </form>
+
+                <a href="{{ url_for('investigations.view_investigation', txn_id=alert.transaction_id) }}" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                    <i class="fa-solid fa-microscope"></i> Investigate
+                </a>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="card" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+        <i class="fa-solid fa-shield-check" style="font-size: 2.5rem; color: var(--risk-low); margin-bottom: 1rem;"></i>
+        <h3>No alerts matching the criteria</h3>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Investigation Center — {{ txn.transaction_id }}{% endblock %}
+{% block page_heading %}Transaction Investigation & Explainable AI Cockpit{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <div>
+        <a href="{{ url_for('transactions.list_transactions') }}" class="btn btn-secondary" style="font-size: 0.85rem;">
+            <i class="fa-solid fa-arrow-left"></i> Back to Transactions
+        </a>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+        <a href="{{ url_for('investigations.export_sar', txn_id=txn.transaction_id) }}" class="btn btn-warning" target="_blank">
+            <i class="fa-solid fa-file-pdf"></i> Export SAR Report (PDF)
+        </a>
+    </div>
+</div>
+
+<!-- Investigation Top Header Card -->
+<div class="card" style="margin-bottom: 2rem; background: linear-gradient(135deg, #131B2E 0%, #1A243D 100%); border-left: 6px solid {% if txn.risk_tier == 'CRITICAL' %}var(--risk-critical){% elif txn.risk_tier == 'HIGH' %}var(--risk-high){% elif txn.risk_tier == 'MEDIUM' %}var(--risk-medium){% else %}var(--risk-low){% endif %};">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem;">
+        <div>
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                <h1 style="font-size: 1.6rem; color: #FFF;">Transaction ID: {{ txn.transaction_id }}</h1>
+                <span class="risk-pill {{ txn.risk_tier }}" style="font-size: 0.9rem; padding: 0.4rem 1rem;">
+                    Status: {{ txn.risk_tier }} RISK
+                </span>
+            </div>
+            <p style="font-size: 0.9rem; color: var(--text-secondary);">
+                Monitored at: {{ txn.transaction_time.strftime('%Y-%m-%d %H:%M:%S UTC') }} | Location: <b>{{ txn.location }}</b>
+            </p>
+        </div>
+
+        <!-- Risk Gauge Box -->
+        <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem 1.75rem; text-align: center;">
+            <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Overall Risk Score</div>
+            <div style="font-size: 2.4rem; font-weight: 800; font-family: var(--font-heading); color: {% if txn.risk_score >= 81 %}var(--risk-critical){% elif txn.risk_score >= 61 %}var(--risk-high){% elif txn.risk_score >= 31 %}var(--risk-medium){% else %}var(--risk-low){% endif %};">
+                {{ txn.risk_score }} <span style="font-size: 1rem; color: var(--text-muted);">/ 100</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <!-- Transaction Details Card -->
+    <div class="card">
+        <h3 style="margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+            <i class="fa-solid fa-receipt" style="color: var(--accent-blue);"></i> Financial Transaction Details
+        </h3>
+
+        <div style="display: flex; flex-direction: column; gap: 1rem; font-size: 0.95rem;">
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem;">
+                <span style="color: var(--text-secondary);">Transaction Amount:</span>
+                <span style="font-weight: 700; font-size: 1.2rem; color: #FFF;">₹{{ "{:,.2f}".format(txn.amount) }}</span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem;">
+                <span style="color: var(--text-secondary);">Sender Account:</span>
+                <span style="font-weight: 600; color: var(--accent-cyan);">{{ txn.sender_account }} {% if sender_cust %}({{ sender_cust.name }}){% endif %}</span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem;">
+                <span style="color: var(--text-secondary);">Receiver Account:</span>
+                <span style="font-weight: 600; color: var(--accent-cyan);">{{ txn.receiver_account }} {% if receiver_cust %}({{ receiver_cust.name }}){% endif %}</span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem;">
+                <span style="color: var(--text-secondary);">Transaction Method:</span>
+                <span>{{ txn.transaction_type }}</span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--text-secondary);">Sender Historical Avg:</span>
+                <span>₹{{ "{:,.2f}".format(sender_cust.avg_monthly_income if sender_cust else 50000.0) }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI & Rule Detection Reasons -->
+    <div class="card">
+        <h3 style="margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+            <i class="fa-solid fa-brain" style="color: var(--accent-purple);"></i> Explainable Detection Reasons
+        </h3>
+
+        <!-- Risk Component Score Breakdown Bar -->
+        <div style="margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                <span>ML Classifier: <b>{{ risk_eval.breakdown.ml_points }} pts</b></span>
+                <span>Anomaly: <b>{{ risk_eval.breakdown.anomaly_points }} pts</b></span>
+                <span>Rules: <b>{{ risk_eval.breakdown.rule_points }} pts</b></span>
+                <span>Behavior: <b>{{ risk_eval.breakdown.behavior_points }} pts</b></span>
+            </div>
+
+            <div style="height: 10px; border-radius: 5px; overflow: hidden; display: flex; background: #1E293B;">
+                <div style="width: {{ (risk_eval.breakdown.ml_points / 100) * 100 }}%; background: #3B82F6;"></div>
+                <div style="width: {{ (risk_eval.breakdown.anomaly_points / 100) * 100 }}%; background: #8B5CF6;"></div>
+                <div style="width: {{ (risk_eval.breakdown.rule_points / 100) * 100 }}%; background: #F97316;"></div>
+                <div style="width: {{ (risk_eval.breakdown.behavior_points / 100) * 100 }}%; background: #EF4444;"></div>
+            </div>
+        </div>
+
+        <!-- Triggered Reasons List -->
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            {% for reason in risk_eval.reasons %}
+            <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-color); padding: 0.85rem; border-radius: 8px; font-size: 0.9rem; color: #F1F5F9; border-left: 4px solid var(--risk-high);">
+                {{ reason }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Investigator Decision Action & Audit Comments -->
+<div class="card" style="margin-bottom: 2rem;">
+    <h3 style="margin-bottom: 1.25rem;">
+        <i class="fa-solid fa-user-pen" style="color: var(--accent-cyan);"></i> Investigator Decision & Audit Log
+    </h3>
+
+    <form method="POST" action="{{ url_for('investigations.submit_decision', txn_id=txn.transaction_id) }}" style="margin-bottom: 1.5rem;">
+        <div style="display: grid; grid-template-columns: 1fr 2fr auto; gap: 1rem; align-items: flex-end;">
+            <div>
+                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.4rem;">Select Compliance Decision</label>
+                <select name="decision" class="form-select" required>
+                    <option value="UNDER_REVIEW">Mark Under Review</option>
+                    <option value="ESCALATED_SAR">Escalate to SAR (Suspicious Activity Report)</option>
+                    <option value="CLEARED">Clear Alert (False Positive)</option>
+                    <option value="REJECTED">Reject Transaction</option>
+                </select>
+            </div>
+
+            <div>
+                <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.4rem;">Investigator Findings & Comments</label>
+                <input type="text" name="comments" class="form-control" placeholder="Enter investigation notes, rationale, or regulatory observations..." required>
+            </div>
+
+            <div>
+                <button type="submit" class="btn btn-primary" style="padding: 0.7rem 1.2rem;">
+                    <i class="fa-solid fa-floppy-disk"></i> Submit Decision
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Past Investigation Log -->
+    <div style="border-top: 1px solid var(--border-color); padding-top: 1rem;">
+        <h4 style="font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 0.75rem;">Audit History Trail</h4>
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            {% for inv in investigations %}
+            <div style="background: {% if inv.investigator == session.get('user_name') %}rgba(59, 130, 246, 0.15){% else %}rgba(15, 23, 42, 0.4){% endif %}; border: 1px solid {% if inv.investigator == session.get('user_name') %}rgba(59, 130, 246, 0.3){% else %}var(--border-color){% endif %}; padding: 0.75rem 1rem; border-radius: 6px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <b>{{ inv.investigator }}</b>
+                    {% if inv.investigator == session.get('user_name') %}
+                        <span style="background: var(--accent-blue); color: #FFF; font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 600; margin-left: 0.4rem;">MY NOTE</span>
+                    {% endif %}
+                    recorded decision: <span style="color: var(--accent-cyan); font-weight: 600;">{{ inv.decision }}</span>
+                    <p style="color: var(--text-secondary); margin-top: 0.2rem;">"{{ inv.comments }}"</p>
+                </div>
+                <div style="color: var(--text-muted); font-size: 0.75rem;">
+                    {{ inv.created_at.strftime('%Y-%m-%d %H:%M') }}
+                </div>
+            </div>
+            {% else %}
+            <p style="font-size: 0.85rem; color: var(--text-muted);">No prior decision logs recorded for this transaction.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Customer History Timeline -->
+<div class="card">
+    <h3 style="margin-bottom: 1rem;">
+        <i class="fa-solid fa-clock-rotate-left" style="color: var(--accent-blue);"></i> Sender Customer Historical Timeline
+    </h3>
+
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Txn ID</th>
+                    <th>Receiver Acc</th>
+                    <th>Amount</th>
+                    <th>Type</th>
+                    <th>Risk Score</th>
+                    <th>Timestamp</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for h in history_txns %}
+                <tr>
+                    <td>{{ h.transaction_id }}</td>
+                    <td>{{ h.receiver_account }}</td>
+                    <td>₹{{ "{:,.2f}".format(h.amount) }}</td>
+                    <td>{{ h.transaction_type }}</td>
+                    <td><span class="risk-pill {{ h.risk_tier }}">{{ h.risk_score }} / 100</span></td>
+                    <td>{{ h.transaction_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" style="text-align: center; color: var(--text-muted);">No previous transaction history for this account.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

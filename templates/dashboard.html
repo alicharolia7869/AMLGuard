@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — AMLGuard{% endblock %}
+{% block page_heading %}Anti-Money Laundering Control Center{% endblock %}
+
+{% block content %}
+<!-- KPI Stats Grid -->
+<div class="grid-4">
+    <div class="card kpi-card">
+        <div class="kpi-icon blue">
+            <i class="fa-solid fa-list-check"></i>
+        </div>
+        <div>
+            <div class="kpi-val">{{ "{:,}".format(total_txns) }}</div>
+            <div class="kpi-lbl">Total Monitored Txns</div>
+        </div>
+    </div>
+
+    <div class="card kpi-card">
+        <div class="kpi-icon red">
+            <i class="fa-solid fa-shield-virus"></i>
+        </div>
+        <div>
+            <div class="kpi-val" style="color: var(--risk-critical);">{{ "{:,}".format(suspicious_count) }}</div>
+            <div class="kpi-lbl">Suspicious Flagged</div>
+        </div>
+    </div>
+
+    <div class="card kpi-card">
+        <div class="kpi-icon orange">
+            <i class="fa-solid fa-bell"></i>
+        </div>
+        <div>
+            <div class="kpi-val" style="color: var(--risk-high);">{{ critical_alerts }}</div>
+            <div class="kpi-lbl">Critical Pending Alerts</div>
+        </div>
+    </div>
+
+    <div class="card kpi-card">
+        <div class="kpi-icon green">
+            <i class="fa-solid fa-user-shield"></i>
+        </div>
+        <div>
+            <div class="kpi-val" style="color: var(--accent-cyan);">{{ high_risk_customers }}</div>
+            <div class="kpi-lbl">High-Risk Entities</div>
+        </div>
+    </div>
+</div>
+
+<!-- Total Monitored Amount Banner -->
+<div class="card" style="margin-bottom: 2rem; background: linear-gradient(135deg, #131B2E 0%, #1E293B 100%); display: flex; align-items: center; justify-content: space-between;">
+    <div>
+        <span style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); font-weight: 600; letter-spacing: 0.05em;">Total Financial Volume Monitored</span>
+        <h3 style="font-size: 1.8rem; color: #FFF; margin-top: 0.25rem;">₹{{ "{:,.2f}".format(total_amount_sum) }}</h3>
+    </div>
+    <div>
+        <a href="{{ url_for('transactions.list_transactions') }}" class="btn btn-primary">
+            <i class="fa-solid fa-magnifying-glass"></i> Inspect All Transactions
+        </a>
+    </div>
+</div>
+
+<div class="grid-2">
+    <!-- Top Suspicious Transactions -->
+    <div class="card">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+            <h3><i class="fa-solid fa-triangle-exclamation" style="color: var(--risk-critical);"></i> Critical Risk Transactions</h3>
+            <a href="{{ url_for('transactions.list_transactions', sort='risk_desc') }}" style="font-size: 0.85rem;">View All</a>
+        </div>
+
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Txn ID</th>
+                        <th>Sender Account</th>
+                        <th>Amount</th>
+                        <th>Risk Score</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for txn in top_suspicious %}
+                    <tr>
+                        <td style="font-weight: 600;">{{ txn.transaction_id }}</td>
+                        <td>{{ txn.sender_account }}</td>
+                        <td style="font-weight: 600;">₹{{ "{:,.2f}".format(txn.amount) }}</td>
+                        <td>
+                            <span class="risk-pill {{ txn.risk_tier }}">
+                                {{ txn.risk_score }} / 100
+                            </span>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('investigations.view_investigation', txn_id=txn.transaction_id) }}" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;">
+                                <i class="fa-solid fa-microscope"></i> Investigate
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: var(--text-muted);">No critical transactions found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Recent Alerts Feed -->
+    <div class="card">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+            <h3><i class="fa-solid fa-bell" style="color: var(--risk-high);"></i> Recent Alert Stream</h3>
+            <a href="{{ url_for('alerts.list_alerts') }}" style="font-size: 0.85rem;">Alert Queue</a>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+            {% for alert in recent_alerts %}
+            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.85rem 1rem; display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span class="risk-pill {{ alert.severity }}">{{ alert.severity }}</span>
+                        <span style="font-weight: 600; font-size: 0.85rem;">{{ alert.transaction_id }}</span>
+                    </div>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                        {{ alert.reasons.split('\n')[0] if alert.reasons else 'Suspicious ML score triggered.' }}
+                    </p>
+                </div>
+                <div>
+                    <a href="{{ url_for('investigations.view_investigation', txn_id=alert.transaction_id) }}" style="font-size: 0.8rem;" class="btn btn-secondary">
+                        Review
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <p style="text-align: center; color: var(--text-muted); padding: 1rem;">No recent alerts generated.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

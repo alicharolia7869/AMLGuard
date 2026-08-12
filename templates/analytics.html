@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics — AMLGuard{% endblock %}
+{% block page_heading %}Anti-Money Laundering Analytics & Intelligence{% endblock %}
+
+{% block content %}
+<div class="grid-2">
+    <!-- Risk Score Distribution Donut Chart -->
+    <div class="card">
+        <h3 style="margin-bottom: 1rem;"><i class="fa-solid fa-chart-pie" style="color: var(--accent-blue);"></i> Risk Tier Distribution</h3>
+        <div id="chart-risk-dist" style="width: 100%; height: 350px;"></div>
+    </div>
+
+    <!-- Transaction Volume Over Time -->
+    <div class="card">
+        <h3 style="margin-bottom: 1rem;"><i class="fa-solid fa-chart-line" style="color: var(--accent-cyan);"></i> Monitored Volume Over Time</h3>
+        <div id="chart-timeline" style="width: 100%; height: 350px;"></div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <!-- Transaction Methods Breakdown -->
+    <div class="card">
+        <h3 style="margin-bottom: 1rem;"><i class="fa-solid fa-money-bill-transfer" style="color: var(--accent-purple);"></i> Transaction Method Breakdown</h3>
+        <div id="chart-types" style="width: 100%; height: 320px;"></div>
+    </div>
+
+    <!-- Alert Queue Status -->
+    <div class="card">
+        <h3 style="margin-bottom: 1rem;"><i class="fa-solid fa-bell" style="color: var(--risk-high);"></i> Alert Workflow Status</h3>
+        <div id="chart-alerts" style="width: 100%; height: 320px;"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    fetch('/api/analytics/charts')
+        .then(response => response.json())
+        .then(data => {
+            // Dark theme layout defaults for Plotly
+            const darkLayout = {
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#94A3B8', family: 'Inter' },
+                margin: { t: 30, b: 40, l: 40, r: 20 },
+                legend: { font: { color: '#F1F5F9' } }
+            };
+
+            // 1. Risk Tier Donut
+            const riskLabels = Object.keys(data.risk_distribution);
+            const riskValues = Object.values(data.risk_distribution);
+            const riskColors = riskLabels.map(l => {
+                if (l === 'CRITICAL') return '#EF4444';
+                if (l === 'HIGH') return '#F97316';
+                if (l === 'MEDIUM') return '#FBBF24';
+                return '#10B981';
+            });
+
+            Plotly.newPlot('chart-risk-dist', [{
+                labels: riskLabels,
+                values: riskValues,
+                type: 'pie',
+                hole: .45,
+                marker: { colors: riskColors }
+            }], { ...darkLayout });
+
+            // 2. Timeline Line Chart
+            Plotly.newPlot('chart-timeline', [{
+                x: data.timeline.dates,
+                y: data.timeline.amounts,
+                type: 'scatter',
+                mode: 'lines+markers',
+                line: { color: '#06B6D4', width: 3 },
+                marker: { color: '#3B82F6', size: 6 }
+            }], {
+                ...darkLayout,
+                xaxis: { gridcolor: '#1E293B' },
+                yaxis: { gridcolor: '#1E293B', title: 'Volume (INR)' }
+            });
+
+            // 3. Transaction Types Bar Chart
+            Plotly.newPlot('chart-types', [{
+                x: Object.keys(data.type_distribution),
+                y: Object.values(data.type_distribution),
+                type: 'bar',
+                marker: { color: '#8B5CF6' }
+            }], {
+                ...darkLayout,
+                xaxis: { gridcolor: '#1E293B' },
+                yaxis: { gridcolor: '#1E293B' }
+            });
+
+            // 4. Alert Status Bar Chart
+            Plotly.newPlot('chart-alerts', [{
+                x: Object.keys(data.alert_distribution),
+                y: Object.values(data.alert_distribution),
+                type: 'bar',
+                marker: { color: '#F97316' }
+            }], {
+                ...darkLayout,
+                xaxis: { gridcolor: '#1E293B' },
+                yaxis: { gridcolor: '#1E293B' }
+            });
+        })
+        .catch(err => console.error("Error loading analytics data:", err));
+});
+</script>
+{% endblock %}

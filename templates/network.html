@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block title %}Network Topology — AMLGuard{% endblock %}
+{% block page_heading %}Transaction Relationship Network & Laundering Ring Topology{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 1.5rem; background: linear-gradient(135deg, #131B2E 0%, #1A243D 100%);">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h3><i class="fa-solid fa-diagram-project" style="color: var(--accent-cyan);"></i> Account Interconnection Topology</h3>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                Visualizing multi-hop money flow loops, smurfing hubs, and circular laundering structures across accounts.
+            </p>
+        </div>
+
+        <div style="display: flex; gap: 1rem; font-size: 0.8rem; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 0.4rem;"><span style="width: 12px; height: 12px; border-radius: 50%; background: #EF4444; display: inline-block;"></span> Critical Loop</div>
+            <div style="display: flex; align-items: center; gap: 0.4rem;"><span style="width: 12px; height: 12px; border-radius: 50%; background: #F97316; display: inline-block;"></span> High Risk Flow</div>
+            <div style="display: flex; align-items: center; gap: 0.4rem;"><span style="width: 12px; height: 12px; border-radius: 50%; background: #FBBF24; display: inline-block;"></span> Medium Risk</div>
+            <div style="display: flex; align-items: center; gap: 0.4rem;"><span style="width: 12px; height: 12px; border-radius: 50%; background: #10B981; display: inline-block;"></span> Low Risk</div>
+        </div>
+    </div>
+</div>
+
+<div class="card" style="padding: 1rem; position: relative;">
+    <div id="network-container" style="width: 100%; height: 600px; background: #0B0F17; border-radius: 8px; border: 1px solid var(--border-color);"></div>
+
+    <!-- Inspector Floating Box -->
+    <div id="node-inspector" style="display: none; position: absolute; top: 2rem; right: 2rem; width: 300px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.25rem; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 10;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <h4 style="font-size: 0.95rem; color: var(--accent-cyan);" id="insp-title">Account Details</h4>
+            <button onclick="document.getElementById('node-inspector').style.display='none'" style="background: none; border: none; color: var(--text-muted); cursor: pointer;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div id="insp-content" style="font-size: 0.85rem; color: var(--text-secondary);">
+            Click a node or edge to inspect transactions.
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    fetch('/api/network/data')
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('network-container');
+            
+            // Format Vis.js dataset
+            const visNodes = data.nodes.map(n => {
+                let colorHex = '#10B981';
+                if (n.group === 'CRITICAL') colorHex = '#EF4444';
+                else if (n.group === 'HIGH') colorHex = '#F97316';
+                else if (n.group === 'MEDIUM') colorHex = '#FBBF24';
+
+                return {
+                    id: n.id,
+                    label: n.label,
+                    shape: 'dot',
+                    size: 16 + (n.val * 3),
+                    color: {
+                        background: colorHex,
+                        border: '#FFFFFF',
+                        highlight: { background: '#06B6D4', border: '#FFFFFF' }
+                    },
+                    font: { color: '#F1F5F9', size: 12, face: 'Inter' }
+                };
+            });
+
+            const visEdges = data.edges.map(e => ({
+                from: e.from,
+                to: e.to,
+                label: e.label,
+                color: e.color,
+                width: e.width,
+                arrows: 'to',
+                font: { color: '#94A3B8', size: 10, align: 'top' },
+                txn_id: e.txn_id
+            }));
+
+            const networkData = {
+                nodes: new vis.DataSet(visNodes),
+                edges: new vis.DataSet(visEdges)
+            };
+
+            const options = {
+                nodes: { borderWidth: 2 },
+                edges: { smooth: { type: 'continuous' } },
+                physics: {
+                    barnesHut: {
+                        gravitationalConstant: -3000,
+                        centralGravity: 0.3,
+                        springLength: 120
+                    }
+                },
+                interaction: { hover: true, tooltipDelay: 100 }
+            };
+
+            const network = new vis.Network(container, networkData, options);
+
+            // Node Click Inspector
+            network.on("click", function(params) {
+                const inspector = document.getElementById('node-inspector');
+                const titleEl = document.getElementById('insp-title');
+                const contentEl = document.getElementById('insp-content');
+
+                if (params.nodes.length > 0) {
+                    const nodeId = params.nodes[0];
+                    const nodeObj = data.nodes.find(n => n.id === nodeId);
+                    
+                    titleEl.innerText = `Account: ${nodeId}`;
+                    contentEl.innerHTML = `
+                        <p style="margin-bottom: 0.5rem;"><b>Entity Risk:</b> <span class="risk-pill ${nodeObj.group}">${nodeObj.group}</span></p>
+                        <p style="margin-bottom: 0.5rem;"><b>Label:</b> ${nodeObj.label.replace('\n', ' ')}</p>
+                        <p><b>Connected Transactions:</b> ${nodeObj.val}</p>
+                    `;
+                    inspector.style.display = 'block';
+                } else if (params.edges.length > 0) {
+                    const edgeId = params.edges[0];
+                    const edgeObj = data.edges[edgeId];
+                    if (edgeObj) {
+                        titleEl.innerText = `Transaction Transfer`;
+                        contentEl.innerHTML = `
+                            <p style="margin-bottom: 0.5rem;"><b>Sender:</b> ${edgeObj.from}</p>
+                            <p style="margin-bottom: 0.5rem;"><b>Receiver:</b> ${edgeObj.to}</p>
+                            <p style="margin-bottom: 0.75rem;"><b>Amount:</b> ${edgeObj.label}</p>
+                            <a href="/investigation/${edgeObj.txn_id}" class="btn btn-primary" style="padding: 0.3rem 0.6rem; font-size: 0.8rem; display: inline-block;">
+                                Open Investigation
+                            </a>
+                        `;
+                        inspector.style.display = 'block';
+                    }
+                } else {
+                    inspector.style.display = 'none';
+                }
+            });
+        })
+        .catch(err => console.error("Error loading network graph data:", err));
+});
+</script>
+{% endblock %}

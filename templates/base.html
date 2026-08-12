@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AMLGuard — AI Transaction Detection Platform{% endblock %}</title>
+    
+    <!-- Google Fonts & FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    
+    <!-- Third Party Visualizer Libraries -->
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    
+    {% block head %}{% endblock %}
+</head>
+<body>
+    {% if session.get('user_id') %}
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand-logo">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div class="brand-name">AML<span>Guard</span></div>
+            </div>
+
+            <ul class="nav-menu">
+                <li class="nav-item {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
+                    <a href="{{ url_for('dashboard.index') }}">
+                        <i class="fa-solid fa-chart-pie"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item {% if 'transactions' in request.endpoint %}active{% endif %}">
+                    <a href="{{ url_for('transactions.list_transactions') }}">
+                        <i class="fa-solid fa-list-check"></i>
+                        <span>Transactions</span>
+                    </a>
+                </li>
+                <li class="nav-item {% if 'alerts' in request.endpoint %}active{% endif %}">
+                    <a href="{{ url_for('alerts.list_alerts') }}">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <span>Alert Center</span>
+                    </a>
+                </li>
+                <li class="nav-item {% if 'customers' in request.endpoint %}active{% endif %}">
+                    <a href="{{ url_for('customers.list_customers') }}">
+                        <i class="fa-solid fa-users"></i>
+                        <span>Customers</span>
+                    </a>
+                </li>
+                <li class="nav-item {% if 'network' in request.endpoint %}active{% endif %}">
+                    <a href="{{ url_for('network.network_view') }}">
+                        <i class="fa-solid fa-diagram-project"></i>
+                        <span>Network Topology</span>
+                    </a>
+                </li>
+                <li class="nav-item {% if 'analytics' in request.endpoint %}active{% endif %}">
+                    <a href="{{ url_for('analytics.analytics_view') }}">
+                        <i class="fa-solid fa-chart-line"></i>
+                        <span>Analytics</span>
+                    </a>
+                </li>
+                <li class="nav-item {% if 'simulator' in request.endpoint %}active{% endif %}">
+                    <a href="{{ url_for('simulator.simulator') }}">
+                        <i class="fa-solid fa-flask-vial"></i>
+                        <span>Risk Simulator</span>
+                    </a>
+                </li>
+                <li class="nav-item {% if 'rules' in request.endpoint %}active{% endif %}">
+                    <a href="{{ url_for('rules.list_rules') }}">
+                        <i class="fa-solid fa-sliders"></i>
+                        <span>AML Rule Manager</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="user-profile-bar">
+                <div class="user-info">
+                    <span class="user-name">{{ session.get('user_name', 'Investigator') }}</span>
+                    <span class="user-role">{{ session.get('user_role', 'investigator') }}</span>
+                </div>
+                <a href="{{ url_for('auth.logout') }}" class="btn-logout" title="Sign Out">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <div class="main-wrapper">
+            <header class="top-header">
+                <div class="page-title">
+                    <h2>{% block page_heading %}AML Monitoring Cockpit{% endblock %}</h2>
+                </div>
+                <div class="header-actions">
+                    <span class="risk-pill LOW"><i class="fa-solid fa-server"></i> ML Engine Live</span>
+                </div>
+            </header>
+
+            <main class="content-container">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert-flash {{ category }}">
+                                <span><i class="fa-solid fa-circle-info"></i> {{ message }}</span>
+                                <button type="button" onclick="this.parentElement.remove()" style="background:none; border:none; color:inherit; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+    {% else %}
+        {% block auth_content %}{% endblock %}
+    {% endif %}
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
