@@ -25,8 +25,11 @@ def create_app():
     app.config.from_object(Config)
 
     # Ensure Upload & Model Directories Exist
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    os.makedirs(app.config['MODEL_DIR'], exist_ok=True)
+    try:
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+        os.makedirs(app.config['MODEL_DIR'], exist_ok=True)
+    except Exception as e:
+        print(f"Directory creation note: {e}")
 
     # Initialize DB
     db.init_app(app)
