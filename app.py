@@ -20,27 +20,8 @@ from routes.analytics import analytics_bp
 from routes.rules import rules_bp
 from routes.simulator import simulator_bp
 
-class VercelWSGIMiddleware:
-    def __init__(self, app):
-        self.app = app
-
-    def __call__(self, environ, start_response):
-        path = environ.get('PATH_INFO', '')
-        if path.startswith('/app.py'):
-            path = path[7:]
-        elif path.startswith('/app'):
-            path = path[4:]
-            
-        if not path or path == '':
-            path = '/'
-            
-        environ['PATH_INFO'] = path
-        environ['SCRIPT_NAME'] = ''
-        return self.app(environ, start_response)
-
 def create_app():
     app = Flask(__name__)
-    app.wsgi_app = VercelWSGIMiddleware(app.wsgi_app)
     app.config.from_object(Config)
     app.url_map.strict_slashes = False
 
