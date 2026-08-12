@@ -9,3 +9,22 @@ if root_dir not in sys.path:
 from app import create_app
 
 app = create_app()
+
+class VercelWSGIHandler:
+    def __init__(self, flask_app):
+        self.flask_app = flask_app
+
+    def __call__(self, environ, start_response):
+        path = environ.get('PATH_INFO', '')
+        if path.startswith('/api/index.py'):
+            path = path[13:] or '/'
+        elif path.startswith('/api/index'):
+            path = path[10:] or '/'
+        elif path.startswith('/api'):
+            path = path[4:] or '/'
+            
+        environ['PATH_INFO'] = path if path else '/'
+        environ['SCRIPT_NAME'] = ''
+        return self.flask_app(environ, start_response)
+
+app.wsgi_app = VercelWSGIHandler(app.wsgi_app)
