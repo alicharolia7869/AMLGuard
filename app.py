@@ -27,9 +27,14 @@ class VercelWSGIMiddleware:
     def __call__(self, environ, start_response):
         path = environ.get('PATH_INFO', '')
         if path.startswith('/app.py'):
-            environ['PATH_INFO'] = path[7:] or '/'
+            path = path[7:]
         elif path.startswith('/app'):
-            environ['PATH_INFO'] = path[4:] or '/'
+            path = path[4:]
+            
+        if not path or path == '':
+            path = '/'
+            
+        environ['PATH_INFO'] = path
         environ['SCRIPT_NAME'] = ''
         return self.app(environ, start_response)
 
