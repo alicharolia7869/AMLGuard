@@ -8,23 +8,16 @@ if root_dir not in sys.path:
 
 from app import create_app
 
-app = create_app()
+_flask_app = create_app()
 
-@app.route('/api/index.py/<path:subpath>', methods=['GET', 'POST'])
-@app.route('/api/index/<path:subpath>', methods=['GET', 'POST'])
-@app.route('/api/index.py', methods=['GET', 'POST'])
-@app.route('/api/index', methods=['GET', 'POST'])
-def vercel_catch_all(subpath=''):
-    from flask import redirect, url_for, session
-    clean_subpath = subpath.strip('/')
-    if not clean_subpath:
-        if 'user_id' in session:
-            return redirect(url_for('dashboard.index'))
-        return redirect(url_for('auth.login'))
-
-    # Dispatch to target view function dynamically
-    for endpoint, func in app.view_functions.items():
-        if endpoint == clean_subpath or endpoint.endswith(f".{clean_subpath}"):
-            return func()
-
-    return redirect(url_for('auth.login'))
+def app(environ, start_response):
+    # Extract real browser URL path from Vercel edge header
+    real_path = environ.get('HTTP_X_FORWARDED_URI') or environ.get('HTTP_X_MATCHED_PATH') or environ.get('PATH_INFO', '/')
+    real_path = real_path.split('?')[0]
+    
+    if not real_path or real_path.startswith('/api/index') or real_path == '/api':
+        real_path = '/'
+        
+    environ['PATH_INFO'] = real_path
+    environ['SCRIPT_NAME'] = ''
+    return _flask_app(environ, start_response)
