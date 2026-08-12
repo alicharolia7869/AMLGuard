@@ -51,6 +51,47 @@ def create_app():
     app.register_blueprint(rules_bp)
     app.register_blueprint(simulator_bp)
 
+    @app.route('/api/index.py/<path:subpath>', methods=['GET', 'POST'])
+    @app.route('/api/index.py', methods=['GET', 'POST'])
+    @app.route('/api/index/<path:subpath>', methods=['GET', 'POST'])
+    @app.route('/api/index', methods=['GET', 'POST'])
+    @app.route('/api/<path:subpath>', methods=['GET', 'POST'])
+    @app.route('/api', methods=['GET', 'POST'])
+    def handle_vercel_entry(subpath=''):
+        from flask import session
+        clean = subpath.strip('/')
+        if not clean or clean == 'login':
+            from routes.auth import login
+            return login()
+        elif clean == 'register':
+            from routes.auth import register
+            return register()
+        elif clean == 'dashboard':
+            from routes.dashboard import index
+            return index()
+        elif clean == 'transactions':
+            from routes.transactions import list_transactions
+            return list_transactions()
+        elif clean == 'alerts':
+            from routes.alerts import list_alerts
+            return list_alerts()
+        elif clean == 'customers':
+            from routes.customers import list_customers
+            return list_customers()
+        elif clean == 'network':
+            from routes.network import network_view
+            return network_view()
+        elif clean == 'analytics':
+            from routes.analytics import analytics_view
+            return analytics_view()
+        elif clean == 'rules':
+            from routes.rules import list_rules
+            return list_rules()
+        elif clean == 'simulator':
+            from routes.simulator import simulator
+            return simulator()
+        return redirect(url_for('auth.login'))
+
     @app.route('/routes-list')
     def list_all_routes():
         return "<br>".join([str(rule) for rule in app.url_map.iter_rules()])
