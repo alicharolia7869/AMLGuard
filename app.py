@@ -2,7 +2,7 @@ import os
 import random
 from datetime import datetime, timedelta
 # pyrefly: ignore [missing-import]
-from flask import Flask, redirect, url_for, render_template
+from flask import Flask, redirect, url_for, render_template, send_from_directory
 
 from config import Config, IS_VERCEL
 from database.models import db, User, Customer, Transaction, Alert, Rule
@@ -101,6 +101,10 @@ def create_app():
         from routes.simulator import simulator
         return simulator()
 
+    @app.route('/static/<path:filename>')
+    def serve_static_file(filename):
+        return send_from_directory(static_dir, filename)
+
     @app.route('/wsgi.py/<path:subpath>', methods=['GET', 'POST'])
     @app.route('/wsgi.py', methods=['GET', 'POST'])
     @app.route('/api/index.py/<path:subpath>', methods=['GET', 'POST'])
@@ -112,6 +116,8 @@ def create_app():
     def handle_vercel_entry(subpath=''):
         from flask import session
         clean = subpath.strip('/')
+        if clean.startswith('static/'):
+            return send_from_directory(static_dir, clean[7:])
         if not clean or clean == 'login':
             from routes.auth import login
             return login()
@@ -159,7 +165,11 @@ def create_app():
     @app.errorhandler(404)
     def page_not_found(e):
         from flask import request
-        if request.path.startswith('/static/') or request.path == '/favicon.ico':
+        if request.path.startswith('/static/'):
+            rel_path = request.path[8:]
+            target = os.path.join(static_dir, rel_path)
+            if os.path.exists(target):
+                return send_from_directory(static_dir, rel_path)
             return "Resource not found", 404
         return render_template('login.html'), 200
 
