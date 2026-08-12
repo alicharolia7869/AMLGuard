@@ -6,10 +6,14 @@ from routes.auth import login_required
 from database.models import db, Transaction, Alert, Investigation, Customer
 from engine.risk_engine import RiskEngine
 
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib import colors
+try:
+    from reportlab.lib.pagesizes import letter
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib import colors
+    HAS_REPORTLAB = True
+except ImportError:
+    HAS_REPORTLAB = False
 
 investigations_bp = Blueprint('investigations', __name__)
 risk_engine = RiskEngine()
@@ -91,6 +95,10 @@ def submit_decision(txn_id):
 @investigations_bp.route('/investigation/<txn_id>/export-sar')
 @login_required
 def export_sar(txn_id):
+    if not HAS_REPORTLAB:
+        flash("PDF export module unavailable.", "warning")
+        return redirect(url_for('investigations.view_investigation', txn_id=txn_id))
+
     txn = Transaction.query.filter_by(transaction_id=txn_id).first_or_404()
     alert = Alert.query.filter_by(transaction_id=txn_id).first()
 
