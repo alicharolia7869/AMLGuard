@@ -84,7 +84,7 @@ The risk engine computes a normalized score between **0 and 100** by combining f
 ### 2. Installation & Setup
 ```bash
 # Clone repository
-git clone https://github.com/alicharolia7869/hangman-game.git
+git clone https://github.com/alicharolia7869/AMLGuard.git
 cd AMLGuard
 
 # Install dependencies
